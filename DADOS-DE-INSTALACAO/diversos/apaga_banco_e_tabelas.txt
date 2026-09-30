@@ -1,0 +1,28 @@
+sudo -u postgres psql
+
+Mate as conexões ativas
+
+Às vezes o VS Code ou o seu Java estão segurando o banco.
+ Este comando "expulsa" todo mundo para permitir o DELETE:
+SQL
+
+SELECT pg_terminate_backend(pg_stat_activity.pid)
+FROM pg_stat_activity
+WHERE pg_stat_activity.datname = 'bco_dados_mercado'
+  AND pid <> pg_backend_pid();
+  
+--apague o banco
+DROP DATABASE IF EXISTS bco_dados_mercado;
+
+se sobrarem tabelas 
+DROP TABLE IF EXISTS tabela_caixas CASCADE;
+DROP TABLE IF EXISTS tabela_clientes CASCADE;
+DROP TABLE IF EXISTS tabela_clientes_pj CASCADE;
+DROP TABLE IF EXISTS tabela_estabelecimento CASCADE;
+DROP TABLE IF EXISTS tabela_fornecedores CASCADE;
+DROP TABLE IF EXISTS tabela_itens_venda CASCADE;
+DROP TABLE IF EXISTS tabela_movimentacoes_estoque CASCADE;
+DROP TABLE IF EXISTS tabela_ncm_ibpt CASCADE;
+DROP TABLE IF EXISTS tabela_produtos CASCADE;
+DROP TABLE IF EXISTS tabela_usuarios CASCADE;
+DROP TABLE IF EXISTS tabela_vendas CASCADE;

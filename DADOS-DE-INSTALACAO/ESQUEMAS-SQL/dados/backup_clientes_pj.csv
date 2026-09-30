@@ -1,0 +1,3 @@
+razao_social;nome_fantasia;cnpj;ie;telefone;email;endereco;numero;complemento;bairro;cidade;uf;cep;limite_credito;data_cadastro
+"Transportadora Beta Ltda. ";"Beta Logística";45678901000121; 987.654.321.098;47303052121;contato@betalogistica.com.br;"Rodovia BR-101";km 50;GALPÃO 12; Zona Industrial;Itajai;SC;88300000;20000.00;2025-12-24 18:49:39
+"Comércio e Serviços Alfa S.A";" AlfaMall";98765432000110;123.456.789.012;11222233456;sac@alfamall.com.br;"Avenida Paulista";500;Conjunto 502;Bela Vista;SÃO PAULO;SP;01310000;30000.00;2025-12-24 21:35:10

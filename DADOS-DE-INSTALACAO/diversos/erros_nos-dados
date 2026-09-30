@@ -1,0 +1,873 @@
+MARCA NESTLÊ  FICOU NESTL_x0090_ -> SERIA Ê
+CARRÉ SUINO  FICOU - CARR_x0090_ -> SERIA É
+CHAP_x0090_U  CHAPÉU - NOVAMENTE A LETRA É 
+CORA_x0080_åES -> CORAÇÕES
+
+
+2. O Script "Limpa-Tudo" no Geany
+
+Agora que você terá um .csv, vamos criar um script Java que ignora a sujeira e foca nos dados que você precisa. Note que seu arquivo tem aspas e vírgulas, então usaremos uma lógica de limpeza:
+Java
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+
+public class ImportadorExcel {
+    public static void main(String[] args) {
+        String csvEntrada = "nome_do_seu_arquivo.csv"; // Arquivo gerado pelo LibreOffice
+        
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                new FileInputStream(csvEntrada), StandardCharsets.UTF_8))) {
+            
+            String linha;
+            while ((linha = br.readLine()) != null) {
+                // Remove as aspas e separa por vírgula
+                String[] col = linha.split("\",\""); 
+                
+                if (col.length >= 3) {
+                    // Limpando as aspas que sobram nas pontas
+                    String ean = col[1].replace("\"", "").trim();
+                    String descricao = col[2].replace("\"", "").trim();
+                    
+                    // Saída pronta para o seu banco de dados
+                    // Coluna '0' incluída para a nova ORIGEM
+                    System.out.printf("INSERT INTO tabela_produtos (codigo_barra, origem, descricao, preco_venda) " +
+                                      "VALUES ('%s', '0', '%s', 0.00);\n", 
+                                      ean, descricao.replace("'", "''"));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+3. Por que o XLSX é melhor para você agora?
+
+    Acentuação: O LibreOffice/Excel costuma lidar melhor com a correção de acentos ao salvar em CSV (UTF-8).
+
+    Estrutura: As colunas ficam travadas, evitando que o preço "pule" para o lugar da descrição.
+
+O que você deve fazer:
+
+    Abra seu XLSX no LibreOffice Calc.
+
+    Vá em Arquivo > Salvar Como.
+
+    Escolha o formato Texto CSV (.csv).
+
+    IMPORTANTE: Marque a opção "Editar configurações do filtro".
+
+    Na próxima tela, escolha Conjunto de caracteres: Unicode (UTF-8) e Delimitador de campo: , (vírgula).
+
+Depois de salvar, abra esse novo CSV no Geany. Os acentos de "CHÁ" e "LEÃO" apareceram corrigidos? Se sim, estamos prontos para rodar o INSERT no banco!
+
+parece ok. veja a sequência dos campos - > cod barra,descricao,marca,atributo,un medida,categoria,cod grupo,grupo,BALANÇA,QTDE,QTDE,QTDE,NCM,CEST,CFTOP,UN_TRIBUT,CEAN_TRIBUT,CST-ICMS,QTDE,CST_PIS,QTDE,CST_CONFIS,QTDE,DT_CADASTRO,LOJA
+
+Não sou capaz de ler o arquivo selecionado. Tente novamente ou verifique o arquivo.
+
+cod barra,descricao,marca,atributo,un medida,categoria,cod grupo,grupo,BALANÇA,QTDE,QTDE,QTDE,NCM,CEST,CFTOP,UN_TRIBUT,CEAN_TRIBUT,CST-ICMS,QTDE,CST_PIS,QTDE,CST_CONFIS,QTDE,DT_CADASTRO,LOJA
+
+Ótimo! Agora temos o mapa da mina. Com essa sequência exata, podemos ajustar o seu importador para ignorar as colunas repetidas (os vários campos de QTDE que provavelmente são estoque em diferentes níveis) e focar no que importa para o seu banco.
+
+Aqui está o mapeamento exato para o seu código Java processar esse CSV (considerando que você salvou do Excel/XLSX com separador de vírgula):
+1. Script de Importação Customizado (Java)
+
+Crie este arquivo no Geany para processar a sua lista de 21 mil itens:
+Java
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.math.BigDecimal;
+
+public class ImportadorPro {
+    public static void main(String[] args) {
+        String arquivo = "produtos_corrigidos.csv"; // O CSV que você exportou do XLSX
+        
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                new FileInputStream(arquivo), StandardCharsets.UTF_8))) {
+            
+            String linha;
+            br.readLine(); // Pula o cabeçalho
+            
+            while ((linha = br.readLine()) != null) {
+                // O regex abaixo lida com vírgulas dentro de aspas (comum em CSVs de Excel)
+                String[] col = linha.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                
+                if (col.length >= 13) {
+                    // Limpeza básica de aspas e espaços
+                    String ean       = limpar(col[0]);
+                    String descricao = limpar(col[1]);
+                    String marca     = limpar(col[2]);
+                    String atributos = limpar(col[3]);
+                    String unMedida  = limpar(col[4]);
+                    String ncm       = limpar(col[12]); // O NCM está na posição 13 (índice 12)
+                    String loja      = (col.length > 24) ? limpar(col[24]) : "1";
+
+                    // Geração do SQL respeitando a nova coluna 'origem' (índice 2)
+                    // Estamos fixando origem como '0' (Nacional)
+                    System.out.printf(
+                        "INSERT INTO tabela_produtos (codigo_barra, origem, descricao, marca, atributos, unidade_medida, ncm, preco_venda, loja) " +
+                        "VALUES ('%s', '0', '%s', '%s', '%s', '%s', '%s', 0.00, '%s');\n",
+                        ean, descricao.replace("'", "''"), marca, atributos, unMedida, ncm, loja
+                    );
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static String limpar(String s) {
+        return s.replace("\"", "").trim();
+    }
+}
+
+2. Por que essa ordem é importante?
+
+Note que na sua lista aparecem três campos de QTDE seguidos e depois outro após o CST-ICMS. O código acima pula esses índices e vai direto buscar o NCM na posição 12 e a LOJA na 24.
+3. Como rodar no seu Linux:
+
+    No Geany, compile o arquivo (F8).
+
+    No terminal, gere o arquivo de carga:
+    Bash
+
+java ImportadorPro > carga_total.sql
+
+Agora, o comando final para o seu banco de dados (Postgres):
+Bash
+
+    psql -U seu_usuario -d seu_banco -f carga_total.sql
+
+Dica de Ouro sobre os Tributos:
+
+Como seu CSV tem campos de CST-ICMS, CST_PIS e CST_CONFIS, você pode incluí-los no printf acima para já trazer a tributação pronta do seu arquivo antigo!
+
+Você quer que eu adicione esses campos de CST no script de importação ou prefere atualizar os impostos depois usando a tabela NCM que conversamos?
+
+qual a melhor opção?
+
+A melhor opção para você agora é utilizar o script de importação Java que já lê o CST e o NCM.
+
+Como você está com os dados abertos no Geany e já identificou a sequência das colunas, é muito mais seguro e rápido importar tudo de uma vez. Se deixarmos para atualizar depois via NCM, você terá o trabalho dobrado de cruzar tabelas, sendo que a informação já está na sua mão (no seu arquivo de 21 mil itens).
+
+Aqui está o porquê desta ser a melhor escolha:
+
+    Consistência: Você mantém os impostos que já estavam configurados no sistema anterior.
+
+    Nova Estrutura: O script já insere a coluna origem na posição correta, evitando que seu banco fique "bagunçado".
+
+    Correção de Acentos: O Java tratará a conversão de caracteres durante a leitura.
+
+Script Final Ajustado (O "Importador Definitivo")
+
+Copie este código para o Geany. Ele já contempla os campos de tributação que você listou:
+Java
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+
+public class ImportadorFinal {
+    public static void main(String[] args) {
+        // Nome do arquivo que você salvou como CSV (UTF-8) no LibreOffice
+        String arquivoCsv = "seus_produtos.csv"; 
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                new FileInputStream(arquivoCsv), StandardCharsets.UTF_8))) {
+            
+            String linha;
+            br.readLine(); // Pula o cabeçalho
+
+            while ((linha = br.readLine()) != null) {
+                // Regex para separar por vírgula ignorando vírgulas dentro de aspas
+                String[] col = linha.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                
+                if (col.length >= 22) { // Garantindo que a linha tem os campos necessários
+                    String ean       = limpar(col[0]);
+                    String descricao = limpar(col[1]);
+                    String marca     = limpar(col[2]);
+                    String ncm       = limpar(col[12]);
+                    String cest      = limpar(col[13]);
+                    String cfop      = limpar(col[14]);
+                    String cstIcms   = limpar(col[17]);
+                    String cstPis    = limpar(col[19]);
+                    String cstCofins = limpar(col[21]);
+                    String loja      = (col.length > 24) ? limpar(col[24]) : "1";
+
+                    // SQL pronto para o PostgreSQL com a 'origem' fixa em '0'
+                    System.out.printf(
+                        "INSERT INTO tabela_produtos (codigo_barra, origem, descricao, marca, ncm, cest, cfop_padrao, cst_icms, cst_pis, cst_cofins, preco_venda, loja) " +
+                        "VALUES ('%s', '0', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', 0.00, '%s');\n",
+                        ean, descricao.replace("'", "''"), marca, ncm, cest, cfop, cstIcms, cstPis, cstCofins, loja
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao processar: " + e.getMessage());
+        }
+    }
+
+    private static String limpar(String s) {
+        if (s == null) return "";
+        return s.replace("\"", "").trim();
+    }
+}
+
+Como proceder no seu Linux agora:
+
+    Gere o SQL: No terminal, rode java ImportadorFinal > carga.sql.
+
+    Confira o SQL: Abra o carga.sql no Geany. Veja se os nomes como "CHÁ" e "LEÃO" estão corretos.
+
+    Aplique no Banco:
+    Bash
+
+    psql -U seu_usuario -d seu_banco -f carga.sql
+
+Dica: Como o preço de venda no seu CSV parece estar espalhado em várias colunas de "QTDE", eu deixei como 0.00 no script. Se você souber qual daquelas colunas de "QTDE" é na verdade o Preço, me avise o número dela e eu ajusto o código para você!
+
+ALGUMAS COISAS ESTRANHAS, MEIA CALÇA ESTÁ ASSIM -> MEIA CAL_x005F_x0080_A
+
+Isso acontece porque o Excel, em algum momento da exportação ou manipulação, converteu caracteres especiais (como o Ç) para códigos hexadecimais internos (o chamado formato _x0000_). No seu caso, _x005F_x0080_ é uma "sujeira" de codificação dupla.
+
+Como você está usando o Geany no Linux, a melhor opção é limpar isso diretamente no seu script Java antes de mandar para o banco. Assim, você não precisa editar o arquivo de 21 mil linhas na mão.
+
+Aqui está o ajuste "mestre" para a função limpar do seu script. Adicione essas linhas para que o Java traduza esses códigos de volta para o português correto:
+1. Ajuste no Código Java (Função Limpar)
+
+Substitua a função limpar do script anterior por esta versão mais robusta:
+Java
+
+private static String limpar(String s) {
+    if (s == null) return "";
+    
+    String limpo = s.replace("\"", "").trim();
+    
+    // Corrige o erro específico do Excel (_x005F_x0080_ para Ç)
+    if (limpo.contains("_x005F_x0080_")) {
+        limpo = limpo.replace("_x005F_x0080_", "Ç");
+    }
+    
+    // Adicione outras correções se aparecerem, por exemplo:
+    // limpo = limpo.replace("_x005F_x0020_", " "); 
+
+    return limpo;
+}
+
+2. Por que isso é a melhor opção?
+
+    Automação: Você trata o erro uma única vez no código e ele corrige as 21.861 linhas instantaneamente.
+
+    Preservação: Você mantém o seu arquivo original intacto e gera um SQL limpo.
+
+    Flexibilidade: Se você rodar o script e notar que o "Ã" ou o "É" também estão com códigos _x005F..., basta adicionar mais uma linha de .replace() na função acima.
+
+3. Como testar agora?
+
+    Altere a função no seu arquivo ImportadorFinal.java no Geany.
+
+    Compile (F8) e execute no terminal direcionando para um arquivo de teste:
+    java ImportadorFinal | head -n 100 > teste_limpo.sql
+
+    Abra o teste_limpo.sql no Geany e procure pela Meia Calça. Se estiver escrito MEIA CALÇA, o script está perfeito!
+
+Dica técnica: Esse código _x005F é o escape do caractere _. O Excel faz isso quando se confunde com a codificação UTF-8. Se aparecerem outros códigos estranhos, pode me mandar o exemplo que eu te dou o "tradutor" exato para colocar na função!
+
+Quer tentar rodar o script com essa correção agora?
+
+AINDA TEMOS PROBLEMAS EM TODO ARQUIVO. A PALVRA PÁ POR EXEMPLOE FICOU Pµ
+
+Isso confirma que o seu arquivo está sofrendo de um conflito de codificação tripla (provavelmente originado em um sistema antigo, aberto no Excel e salvo novamente). O Pµ acontece porque o caractere Á foi quebrado e restou apenas a "metade" inferior do código.
+
+Como você está no Linux com Geany, não vamos mais tentar converter o arquivo manualmente, pois a "sujeira" está incrustada. Vamos usar o Java como um filtro de limpeza potente.
+O Importador "Limpador de Caracteres"
+
+Vou te passar uma função de tradução completa. Ela vai pegar esses códigos estranhos que o Excel gerou (_x005F_...) e os caracteres quebrados (µ, Ã, etc.) e converter para o português correto antes de salvar no banco.
+
+Substitua a função limpar no seu script do Geany por esta:
+Java
+
+private static String limpar(String s) {
+    if (s == null) return "";
+    
+    // 1. Remove as aspas do CSV
+    String texto = s.replace("\"", "").trim();
+    
+    // 2. Traduz os códigos hexadecimais do Excel (Os mais comuns)
+    texto = texto.replace("_x005F_x0080_", "Ç")
+                 .replace("_x005F_x001B_", "") // Caractere invisível comum
+                 .replace("_x005F_x000D_", ""); // Quebra de linha interna
+    
+    // 3. Traduz os caracteres "Mutilados" (Onde o Á virou µ, etc)
+    // Nota: Adicione conforme encontrar novos erros
+    texto = texto.replace("Pµ", "PÁ")
+                 .replace("CHÂµ", "CHÁ")
+                 .replace("CAFÂµ", "CAFÉ")
+                 .replace("Ã‡", "Ç")
+                 .replace("Ã„", "Ã")
+                 .replace("Ã‰", "É")
+                 .replace("Ã“", "Ó");
+
+    return texto;
+}
+
+Por que o seu script é a melhor ferramenta agora?
+
+    Cirúrgico: Em vez de tentar consertar 21.000 linhas no olho, o script faz o "Procurar e Substituir" em milissegundos.
+
+    Visualização: Se você rodar o script e notar que a palavra CAFÉ ainda está errada, você só adiciona mais uma linha .replace("erro", "CAFÉ") no Java e roda de novo. É um processo de refinamento.
+
+    Saída Limpa: O banco de dados PostgreSQL receberá o texto já perfeito, pronto para ser exibido no seu PDV.
+
+Como encontrar todos os erros de uma vez?
+
+No terminal do Linux, use este comando para listar as palavras que ainda estão "sujas" no seu CSV e saber o que adicionar no script:
+Bash
+
+# Mostra todas as linhas que contêm caracteres não comuns (estranhos)
+grep -P '[^\x00-\x7f]' seus_produtos.csv | head -n 20
+
+Dica para o Próximo Passo:
+Rode o script com essa nova função limpar. Se aparecer qualquer outra palavra bizarra (tipo o "PÁ" que virou "Pµ"), me mande exatamente como ela aparece. Eu te ajudo a montar a "tabela de tradução" final para o seu importador.
+
+Quer que eu monte o script completo unindo a sequência de colunas que você passou com esse novo filtro de limpeza?
+
+A PALAVRA NESTLÊ FICOU ASSIM- > NESTL_x005F_x0090_
+
+Isso confirma que o Excel aplicou um "escape" duplo em caracteres que ele não reconheceu. O código _x005F_x0090_ é a forma que ele encontrou para representar o Ê.
+
+Como você está usando o Geany, vamos consolidar todas essas descobertas em um script único. Vou montar o código completo para você, já incluindo a sequência de colunas que você me passou e o "dicionário" de tradução para limpar essas sujeiras do Excel.
+O Importador "Limpador Automático" (Java)
+
+Copie este código para o Geany e salve como ImportadorPDV.java.
+Java
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+
+public class ImportadorPDV {
+    public static void main(String[] args) {
+        // Ajuste para o nome do seu arquivo exportado do XLSX
+        String arquivoCsv = "seus_produtos.csv"; 
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                new FileInputStream(arquivoCsv), StandardCharsets.UTF_8))) {
+            
+            String linha;
+            br.readLine(); // Pula o cabeçalho
+
+            while ((linha = br.readLine()) != null) {
+                // Regex para separar por vírgula ignorando vírgulas dentro de aspas
+                String[] col = linha.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                
+                if (col.length >= 22) {
+                    String ean       = limpar(col[0]);
+                    String descricao = limpar(col[1]);
+                    String marca     = limpar(col[2]);
+                    String ncm       = limpar(col[12]);
+                    String cest      = limpar(col[13]);
+                    String cfop      = limpar(col[14]);
+                    String cstIcms   = limpar(col[17]);
+                    String cstPis    = limpar(col[19]);
+                    String cstCofins = limpar(col[21]);
+                    String loja      = (col.length > 24) ? limpar(col[24]) : "1";
+
+                    // SQL pronto com a coluna 'origem' fixa em '0' (Nacional)
+                    System.out.printf(
+                        "INSERT INTO tabela_produtos (codigo_barra, origem, descricao, marca, ncm, cest, cfop_padrao, cst_icms, cst_pis, cst_cofins, preco_venda, loja) " +
+                        "VALUES ('%s', '0', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', 0.00, '%s');\n",
+                        ean, descricao.replace("'", "''"), marca, ncm, cest, cfop, cstIcms, cstPis, cstCofins, loja
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erro: " + e.getMessage());
+        }
+    }
+
+    private static String limpar(String s) {
+        if (s == null) return "";
+        
+        // Remove as aspas do CSV
+        String t = s.replace("\"", "").trim();
+        
+        // --- DICIONÁRIO DE TRADUÇÃO EXCEL / HEX ---
+        t = t.replace("_x005F_x0090_", "Ê")   // Caso NESTLÊ
+             .replace("_x005F_x0080_", "Ç")   // Caso MEIA CALÇA
+             .replace("_x005F_x001B_", "")    // Caracteres invisíveis
+             .replace("Pµ", "PÁ")             // Correção de mutilação UTF-8
+             .replace("CHÂµ", "CHÁ")
+             .replace("CAFÂµ", "CAFÉ")
+             .replace("Ã‡", "Ç")
+             .replace("Ã‰", "É")
+             .replace("Ã“", "Ó")
+             .replace("Ãƒ", "Ã");
+
+        return t;
+    }
+}
+
+Por que esta é a melhor saída para você:
+
+    Poder de Correção: Em vez de sofrer tentando "re-codificar" o arquivo no Linux, você está ensinando o Java a ler o erro e escrever o acerto.
+
+    Sequência Real: O script já pula os campos de QTDE e busca o NCM, CEST e CST nas posições certas que você me enviou.
+
+    Fácil de Refinar: Se você rodar o script e aparecer um nome como LIM_x005F_x00..O, você só adiciona mais um .replace() na função limpar e pronto.
+
+Como rodar agora no seu Linux:
+
+    No Geany, aperte F8 para compilar.
+
+    No terminal, execute o comando para gerar o script SQL:
+    Bash
+
+    java ImportadorPDV > carga_produtos.sql
+
+    Abra o arquivo carga_produtos.sql no Geany e use a busca (Ctrl+F) para procurar por "NESTLÊ" e "CALÇA". Se estiverem certas, o seu banco de dados vai ficar impecável.
+
+Dica: Se encontrar mais algum código _x005F_... estranho, pode me mandar. Eu te digo na hora qual letra ele representa!
+
+Perácio, eu analisei o arquivo carga-final.sql que você gerou e notei um erro crítico no comando SQL. O script acabou gerando um "INSERT dentro de outro INSERT", o que vai impedir a gravação no seu banco de dados.
+
+Veja como está saindo no seu arquivo:
+VALUES ('INSERT INTO tabela_produtos (codigo_barra', '0', 'origem', ...)
+
+Isso aconteceu porque o comando System.out.printf no Java foi configurado com os nomes das colunas dentro dos valores, ou houve uma repetição na string de formato.
+Como corrigir o Script no Geany
+
+Substitua a parte do System.out.printf dentro do seu while pelo código abaixo. Ele está ajustado para a sequência correta de colunas que você me passou e limpa o SQL:
+Java
+
+// SQL CORRIGIDO
+System.out.printf(
+    "INSERT INTO tabela_produtos (codigo_barra, origem, descricao, marca, ncm, cest, cfop_padrao, cst_icms, cst_pis, cst_cofins, preco_venda, loja) " +
+    "VALUES ('%s', '0', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', 0.00, '%s');\n",
+    ean, 
+    descricao.replace("'", "''"), 
+    marca.replace("'", "''"), 
+    ncm, 
+    cest, 
+    cfop, 
+    cstIcms, 
+    cstPis, 
+    cstCofins, 
+    loja
+);
+
+O que mudou?
+
+    Remoção do lixo: Tirei o texto "INSERT INTO..." que estava saindo dentro dos valores (parênteses).
+
+    Escape de Aspas: Adicionei .replace("'", "''") na Marca também. Se um produto for de uma marca tipo L'ORÉAL, o SQL daria erro sem isso.
+
+    Origem: Mantive o '0' fixo para Nacional.
+
+Dica para os acentos (NESTLÊ, PÁ, CALÇA)
+
+Se você ainda notar que o _x005F_ está aparecendo no arquivo .sql gerado, certifique-se de que a sua função limpar está sendo chamada para todas as variáveis (ean, descricao, marca, etc.) antes do printf.
+
+O próximo passo:
+
+    Altere o código no Geany.
+
+    Rode novamente: java ImportadorFinal > carga_corrigida.sql
+
+    Verifique se o início da linha agora parece um comando limpo, assim:
+    INSERT INTO tabela_produtos (...) VALUES ('789...', '0', 'ASA FRANGO', ...);
+
+Se o arquivo estiver assim, você já pode rodar no terminal do Linux para importar os 21 mil itens! Quer que eu te ajude com o comando para rodar o arquivo .sql direto no Postgres?
+
+veja- refesco em PÓ ficou refresco em Pà
+
+Analisando o que aconteceu: o caractere Ó foi convertido para à. Isso confirma que o seu ficheiro original está numa codificação (provavelmente Windows-1252 ou ISO-8859-1) e ao ser lido ou convertido, o Java/Terminal interpretou mal esse byte específico.
+
+Para resolver isso de forma definitiva, vamos adicionar essa "tradução" específica no seu script do Geany. Além disso, notei pelo seu ficheiro carga-final.sql que o comando printf está a misturar os nomes das colunas com os valores.
+
+Aqui está o código Java corrigido e completo para você colar no Geany. Ele resolve o erro do "PÓ -> Pà" e limpa o SQL:
+Java
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+
+public class ImportadorPDV {
+    public static void main(String[] args) {
+        // Certifique-se que o nome do arquivo aqui é o seu CSV exportado
+        String arquivoCsv = "seus_produtos.csv"; 
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                new FileInputStream(arquivoCsv), StandardCharsets.UTF_8))) {
+            
+            String linha;
+            br.readLine(); // Pula o cabeçalho se existir
+
+            while ((linha = br.readLine()) != null) {
+                // Separa por vírgula, ignorando vírgulas dentro de aspas
+                String[] col = linha.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                
+                if (col.length >= 22) {
+                    // Mapeamento baseado na sua sequência
+                    String ean       = limpar(col[0]);
+                    String descricao = limpar(col[1]);
+                    String marca     = limpar(col[2]);
+                    String ncm       = limpar(col[12]);
+                    String cest      = limpar(col[13]);
+                    String cfop      = limpar(col[14]);
+                    String cstIcms   = limpar(col[17]);
+                    String cstPis    = limpar(col[19]);
+                    String cstCofins = limpar(col[21]);
+                    String loja      = (col.length > 24) ? limpar(col[24]) : "1";
+
+                    // FORMATO SQL CORRIGIDO (Sem os nomes das colunas dentro dos valores)
+                    System.out.printf(
+                        "INSERT INTO tabela_produtos (codigo_barra, origem, descricao, marca, ncm, cest, cfop_padrao, cst_icms, cst_pis, cst_cofins, preco_venda, loja) " +
+                        "VALUES ('%s', '0', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', 0.00, '%s');\n",
+                        ean, 
+                        descricao.replace("'", "''"), 
+                        marca.replace("'", "''"), 
+                        ncm, cest, cfop, cstIcms, cstPis, cstCofins, loja
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erro: " + e.getMessage());
+        }
+    }
+
+    private static String limpar(String s) {
+        if (s == null) return "";
+        String t = s.replace("\"", "").trim();
+        
+        // --- DICIONÁRIO DE TRADUÇÃO DE ERROS ---
+        t = t.replace("_x005F_x0090_", "Ê")
+             .replace("_x005F_x0080_", "Ç")
+             .replace("Pà", "PÓ")      // Correção específica para REFRESCO EM PÓ
+             .replace("Pµ", "PÁ")      // Caso o PÁ também esteja errado
+             .replace("Âµ", "Á")
+             .replace("Ã‡", "Ç")
+             .replace("Ã‰", "É")
+             .replace("Ã“", "Ó")
+             .replace("Ãƒ", "Ã")
+             .replace("ÃŠ", "Ê");
+
+        return t;
+    }
+}
+
+O que deve fazer agora:
+
+    No Geany: Substitua todo o seu código por este acima.
+
+    Compile: Pressione F8.
+
+    No Terminal do Linux: Gere o novo ficheiro de carga:
+    Bash
+
+java ImportadorPDV > carga_limpa.sql
+
+Verifique: Abra o carga_limpa.sql no Geany e procure por "PÓ". Se estiver correto, o comando para inserir no seu banco de dados Postgres é:
+Bash
+
+    psql -U seu_utilizador -d seu_nome_do_banco -f carga_limpa.sql
+
+Nota sobre o erro do SQL anterior: No ficheiro que enviou, o campo codigo_barra estava a receber o texto 'INSERT INTO tabela_produtos...'. Este novo código que escrevi acima separa o comando SQL dos dados reais, resolvendo o problema de uma vez.
+
+são muitos erros.. ainda há outros que ainda nem te contei
+
+Perfeito, Perácio. Eu entendo perfeitamente a sua frustração. Quando trabalhamos com bases de dados de 20 mil itens que passaram por vários sistemas antigos e pelo Excel, o que acontece é uma "sopa de letrinhas" técnica.
+
+O problema é que o seu arquivo está com múltiplas camadas de erro:
+
+    Erro de Encoding: O arquivo original era uma coisa, foi lido como outra.
+
+    Erro de Escape do Excel: Aqueles _x005F_ que transformaram "Ç" e "Ê" em códigos.
+
+    Mutilação de Bytes: Onde o "Ó" virou "à" ou "Pµ".
+
+Em vez de tentarmos adivinhar cada erro um por um, vamos usar uma estratégia de "Limpeza Bruta" no seu script do Geany. Vamos criar um método que limpa os casos mais comuns e você poderá adicionar novas linhas facilmente conforme encontrar outros erros.
+O Script "Faxina Geral" (Java)
+
+Substitua a sua função limpar por esta versão "turbinada". Ela já está preparada para os erros que você me contou e para os que você "ainda não contou" (como o Â, Ê, Î, Ô, Û):
+Java
+
+private static String limpar(String s) {
+    if (s == null) return "";
+    String t = s.replace("\"", "").trim();
+    
+    // 1. LIMPEZA DE CÓDIGOS HEXADECIMAIS DO EXCEL (Os _x005F_)
+    t = t.replace("_x005F_x0080_", "Ç")
+         .replace("_x005F_x0090_", "Ê")
+         .replace("_x005F_x000D_", "") 
+         .replace("_x005F_x001B_", "");
+
+    // 2. TRADUTOR DE "MUTILAÇÕES" (O que você encontrou e os prováveis próximos)
+    t = t.replace("Pà", "PÓ")   // O que você acabou de achar
+         .replace("Pµ", "PÁ")   // O que achamos antes
+         .replace("Âµ", "Á")
+         .replace("Â©", "É")
+         .replace("Âª", "Ê")
+         .replace("Ã‡", "Ç")
+         .replace("Ã‰", "É")
+         .replace("Ã“", "Ó")
+         .replace("Ãƒ", "Ã")
+         .replace("ÃŠ", "Ê")
+         .replace("Ã ", "à")
+         .replace("Ã¡", "á");
+
+    // 3. REMOÇÃO DE CARACTERES NÃO IMPRESSÍVEIS (Sujeira invisível)
+    t = t.replaceAll("[\\x00-\\x1F\\x7F]", "");
+
+    return t;
+}
+
+Por que o seu SQL saiu errado da última vez?
+
+No arquivo carga-final.sql que você me mandou, o Java escreveu o comando INSERT dentro do campo do código de barras. Isso acontece se o seu System.out.printf estiver assim:
+
+❌ Errado: printf("... VALUES ('INSERT INTO...', ...")
+
+Certifique-se de que o seu printf no Geany está exatamente assim:
+
+✅ Correto:
+Java
+
+System.out.printf(
+    "INSERT INTO tabela_produtos (codigo_barra, origem, descricao, marca, ncm, cest, cfop_padrao, cst_icms, cst_pis, cst_cofins, preco_venda, loja) " +
+    "VALUES ('%s', '0', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', 0.00, '%s');\n",
+    ean, descricao.replace("'", "''"), marca.replace("'", "''"), ncm, cest, cfop, cstIcms, cstPis, cstCofins, loja
+);
+
+Como "caçar" os erros que você ainda não contou:
+
+No Linux, use este comando no terminal para gerar uma lista de tudo o que ainda está estranho. Ele vai te mostrar as palavras que têm caracteres fora do padrão:
+Bash
+
+# Esse comando filtra palavras com caracteres especiais para você ver o erro
+grep -P '[^\x00-\x7f]' seus_produtos.csv | cut -d',' -f2 | head -n 50
+
+O que fazer agora?
+
+    Atualize a função limpar e o printf no Geany.
+
+    Gere o arquivo novamente: java SeuScript > carga_nova.sql.
+
+    Abra no Geany e veja se a primeira linha já está correta.
+
+Se você me mandar mais 2 ou 3 exemplos desses "erros que ainda não contou", eu consigo completar o dicionário de tradução para você de uma vez só! O que mais apareceu de estranho?
+
+vou começar do primeiro csv que converti da planilha xlsx
+
+Essa é a decisão mais correta e profissional, Perácio! Começar do zero com o CSV exportado do Excel nos dá o controle total para limpar toda essa "sujeira" de uma vez só, sem carregar erros de tentativas anteriores.
+
+Para que seu banco de dados fique perfeito, vamos usar um script que faz a "Tradução Universal". Eu mapeei os códigos que você me enviou e os mais comuns do Excel.
+O Script de Limpeza Total (Copie para o Geany)
+
+Salve este código como ImportadorLimpo.java. Ele já está corrigido para não repetir o comando INSERT dentro dos valores.
+Java
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+
+public class ImportadorLimpo {
+    public static void main(String[] args) {
+        String arquivoCsv = "seu_arquivo_original.csv"; // O CSV que você tirou do XLSX
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                new FileInputStream(arquivoCsv), StandardCharsets.UTF_8))) {
+            
+            String linha;
+            br.readLine(); // Pula o cabeçalho
+
+            while ((linha = br.readLine()) != null) {
+                // Separa por vírgula tratando aspas
+                String[] col = linha.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                
+                if (col.length >= 22) {
+                    String ean       = limpar(col[0]);
+                    String descricao = limpar(col[1]);
+                    String marca     = limpar(col[2]);
+                    String ncm       = limpar(col[12]);
+                    String cest      = limpar(col[13]);
+                    String cfop      = limpar(col[14]);
+                    String cstIcms   = limpar(col[17]);
+                    String cstPis    = limpar(col[19]);
+                    String cstCofins = limpar(col[21]);
+                    String loja      = (col.length > 24) ? limpar(col[24]) : "1";
+
+                    // SQL LIMPO E CORRIGIDO
+                    System.out.printf(
+                        "INSERT INTO tabela_produtos (codigo_barra, origem, descricao, marca, ncm, cest, cfop_padrao, cst_icms, cst_pis, cst_cofins, preco_venda, loja) " +
+                        "VALUES ('%s', '0', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', 0.00, '%s');\n",
+                        ean, 
+                        descricao.replace("'", "''"), 
+                        marca.replace("'", "''"), 
+                        ncm, cest, cfop, cstIcms, cstPis, cstCofins, loja
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erro: " + e.getMessage());
+        }
+    }
+
+    private static String limpar(String s) {
+        if (s == null) return "";
+        String t = s.replace("\"", "").trim();
+        
+        // --- DICIONÁRIO DE TRADUÇÃO (FAXINA GERAL) ---
+        t = t.replace("_x005F_x0080_", "Ç")
+             .replace("_x005F_x0090_", "Ê")
+             .replace("_x005F_x001B_", "")
+             .replace("Pà", "PÓ")
+             .replace("Pµ", "PÁ")
+             .replace("Âµ", "Á")
+             .replace("Ã‡", "Ç")
+             .replace("Ã‰", "É")
+             .replace("Ã“", "Ó")
+             .replace("Ãƒ", "Ã")
+             .replace("ÃŠ", "Ê")
+             .replace("Ã ", "à")
+             .replace("Ã¡", "á")
+             .replace("Ãµ", "õ")
+             .replace("Ã§", "ç")
+             .replace("Âº", "º");
+
+        return t;
+    }
+}
+
+Por que recomeçar agora vai dar certo?
+
+    Fim do "Insert Duplo": No seu arquivo carga-final.sql anterior, o campo codigo_barra continha o texto do comando SQL. O printf acima resolve isso: os nomes das colunas ficam no comando, e as variáveis ficam nos valores.
+
+    Limpeza de caracteres invisíveis: Adicionei a remoção de _x005F_x001B_, que são comandos de controle que travam o banco de dados.
+
+    Tratamento de Aspas Simples: O .replace("'", "''") é vital. Sem ele, marcas como "L'Oreal" quebram todo o seu banco.
+
+Como rodar no Terminal do Linux:
+
+    Compile: javac ImportadorLimpo.java
+
+    Gere o SQL: java ImportadorLimpo > carga_perfeita.sql
+
+    Dê uma olhada: head -n 20 carga_perfeita.sql (Verifique se as 20 primeiras linhas estão bonitas).
+
+Se encontrar qualquer palavra que o script não "limpou", não tente consertar no arquivo. Me diga a palavra errada aqui, nós adicionamos mais uma linha de .replace() no Java e rodamos de novo. Automatizar é o segredo para 21 mil itens! Podemos seguir com esse?
+
+confere ai se está certo -> import java.io.*;
+
+import java.nio.charset.StandardCharsets;
+
+
+public class ImportadorPDV {
+
+    public static void main(String[] args) {
+
+        // Ajuste para o nome do seu arquivo exportado do XLSX
+
+        String arquivoCsv = "produtos-teste.csv"; 
+
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(
+
+                new FileInputStream(arquivoCsv), StandardCharsets.UTF_8))) {
+
+            
+
+            String linha;
+
+            br.readLine(); // Pula o cabeçalho
+
+
+            while ((linha = br.readLine()) != null) {
+
+                // Regex para separar por vírgula ignorando vírgulas dentro de aspas
+
+                String[] col = linha.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+                
+
+                if (col.length >= 22) {
+
+                    String ean       = limpar(col[0]);
+
+                    String descricao = limpar(col[1]);
+
+                    String marca     = limpar(col[2]);
+
+                    String ncm       = limpar(col[12]);
+
+                    String cest      = limpar(col[13]);
+
+                    String cfop      = limpar(col[14]);
+
+                    String cstIcms   = limpar(col[17]);
+
+                    String cstPis    = limpar(col[19]);
+
+                    String cstCofins = limpar(col[21]);
+
+                    String loja      = (col.length > 24) ? limpar(col[24]) : "1";
+
+
+                    // SQL pronto com a coluna 'origem' fixa em '0' (Nacional)
+
+System.out.printf(
+
+    "INSERT INTO tabela_produtos (codigo_barra, origem, descricao, marca, ncm, cest, cfop_padrao, cst_icms, cst_pis, cst_cofins, preco_venda, loja) " +
+
+    "VALUES ('%s', '0', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', 0.00, '%s');\n",
+
+    ean, 
+
+    descricao.replace("'", "''"), 
+
+    marca.replace("'", "''"), 
+
+    ncm, 
+
+    cest, 
+
+    cfop, 
+
+    cstIcms, 
+
+    cstPis, 
+
+    cstCofins, 
+
+    loja
+
+    );
+
+                }
+
+            }
+
+        } catch (Exception e) {
+
+            System.err.println("Erro: " + e.getMessage());
+
+        }
+
+    }
+
+
+  private static String limpar(String s) {
+
+    if (s == null) return "";
+
+    String t = s.replace("\"", "").trim();
+
+    
+
+    // 1. LIMPEZA DE CÓDIGOS HEXADECIMAIS DO EXCEL (Os _x005F_)
+
+    t = t.replace("_x005F_x0080_", "Ç")
+
+         .replace("_x005F_x0090_", "Ê")
+
+         .replace("_x005F_x000D_", "") 
+
+         .replace("_x005F_x001B_", "");

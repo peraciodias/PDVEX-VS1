@@ -1,0 +1,36 @@
+O Grande Teste: Atualizar os Impostos Automaticamente
+
+Você não precisa digitar a alíquota de cada produto. Com o SQL abaixo,
+ você cruza a sua tabela_produtos com a tabela_ncm_ibpt e atualiza a a
+ líquota de todos os produtos de uma só vez, baseando-se no NCM que
+ você já tem cadastrado:
+SQL
+
+UPDATE tabela_produtos p
+SET aliquota_icms = (
+    SELECT 
+        CASE 
+            WHEN p.origem IN ('0', '3', '4', '5') THEN i.aliq_federal_nacional + i.aliq_estadual + i.aliq_municipal
+            ELSE i.aliq_federal_importado + i.aliq_estadual + i.aliq_municipal
+        END
+    FROM tabela_ncm_ibpt i
+    WHERE i.codigo_ncm = p.ncm
+    LIMIT 1
+)
+WHERE EXISTS (
+    SELECT 1 FROM tabela_ncm_ibpt i WHERE i.codigo_ncm = p.ncm
+);
+
+O que fazer agora?
+
+    Popular a tabela NCM: Baixe o CSV do IBPT do seu estado e 
+    importe para a tabela_ncm_ibpt.
+
+    Verificar o NCM nos produtos: Garanta que o campo ncm na sua 
+    tabela_produtos tenha os 8 dígitos corretos.
+
+    Rodar o SQL acima: Isso vai preencher o campo aliquota_icms (ou você
+     pode criar um campo novo chamado aliq_ibpt) automaticamente.
+
+Quando você for finalizar a venda no Java, basta pegar esse valor e 
+multiplicar pelo total do item.

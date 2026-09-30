@@ -1,0 +1,7 @@
+-- 1. Crie o banco novo definindo o 'pera' como dono (Owner)
+-- Isso evita 99% dos erros de 'Permission Denied'
+CREATE DATABASE bco_dados_mercado OWNER pera;
+
+--dar privilégios ao usuário pera
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO pera;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO pera;

@@ -1,0 +1,32 @@
+Trabalhar com JDBC puro dá a você um controle total sobre a performance, o que é excelente para um PDV que precisa ser rápido. No entanto, em um cenário de múltiplos caixas, isso aumenta a sua responsabilidade com a gestão de conexões.
+Como você decidiu manter o PostgreSQL para suportar vários terminais, aqui estão três pontos críticos para o seu código atual:
+1. Use um Pool de Conexões (Indispensável)
+No JDBC puro, abrir e fechar uma conexão para cada venda (DriverManager.getConnection) é muito lento e pode travar o Postgres se muitos caixas fizerem isso ao mesmo tempo.
+
+    Recomendação: Use o HikariCP. É a biblioteca de pool de conexões mais rápida para Java. Ela mantém algumas conexões abertas e prontas para uso, o que acelera drasticamente a finalização de cupons fiscais.
+
+2. Atenção ao Fechamento de Recursos
+Certifique-se de que cada Statement e ResultSet está sendo fechado em um bloco try-with-resources. Em sistemas multi-caixas, o vazamento de memória (memory leak) no banco de dados é a causa número 1 de travamentos após algumas horas de uso da loja.
+3. Isole a lógica de Conexão
+Para que o seu sistema seja flexível, garanta que a URL de conexão (IP do servidor) não esteja "fixa" (hardcoded) no código. Como você terá vários caixas, o sistema precisará apontar para o IP do computador que servirá como o "servidor" da loja.
+
+    Dica: Use um arquivo .properties ou .env externo para que o usuário possa configurar o IP do servidor no momento da instalação.
+
+Exemplo rápido com Try-with-resources:
+java
+
+String sql = "SELECT estoque FROM produtos WHERE id = ?";
+try (Connection conn = dataSource.getConnection(); // Usando Pool
+     PreparedStatement stmt = conn.prepareStatement(sql)) {
+    stmt.setInt(1, produtoId);
+    try (ResultSet rs = stmt.executeQuery()) {
+        if (rs.next()) {
+            // lógica aqui
+        }
+    }
+} catch (SQLException e) {
+    e.printStackTrace();
+}
+
+Use o código com cuidado.
+Já que você está no JDBC puro, você utiliza alguma classe DAO (Data Access Object) centralizada para gerenciar essas conexões ou as queries estão espalhadas pelas telas do sistema?

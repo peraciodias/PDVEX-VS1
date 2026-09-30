@@ -1,0 +1,31 @@
+VALIDAÇÃO AUTOMÁTICA (IMPORTANTE)
+
+Depois roda:
+
+SELECT COUNT(*) FROM tabela_usuarios;
+SELECT COUNT(*) FROM tabela_produtos;
+SELECT COUNT(*) FROM tabela_clientes;
+SELECT COUNT(*) FROM tabela_clientes_pj;
+SELECT COUNT(*) FROM tabela_fornecedores;
+💡 DICA PROFISSIONAL (NÍVEL PRODUÇÃO)
+
+Se quiser evitar duplicidade ao rodar várias vezes:
+
+TRUNCATE tabela_usuarios RESTART IDENTITY CASCADE;
+TRUNCATE tabela_produtos RESTART IDENTITY CASCADE;
+TRUNCATE tabela_clientes RESTART IDENTITY CASCADE;
+TRUNCATE tabela_clientes_pj RESTART IDENTITY CASCADE;
+TRUNCATE tabela_fornecedores RESTART IDENTITY CASCADE;
+
+👉 Coloca isso no topo do script
+
+🚀 RESULTADO FINAL
+
+Agora você tem:
+
+✔ export padronizado
+✔ import padronizado
+✔ compatibilidade total
+✔ sem erro de aspas
+✔ sem erro de NULL
+✔ sem problema de sequênci

@@ -1,0 +1,9 @@
+1-instalar e configurar seu POSTGRESQL
+2-criar uma pasta /temp se linux ou \temp se estiver usando windows
+ 2.1-copiar os dados do seu banco de dados na pasta /temp criada
+     esta pasta deve estar desbloqueada para acesso , pois alguns 
+     sistemas só permitem via administrador do sistema
+3-criar seu banco de dados e todas as tabelas usando o script de
+  criação TABELAS-PDVEX-VS1.sql  disponível na pasta /PDVex-v1/DADOS-DE-INSTALACAO/instalacao
+  criar importar seus dados de acordo com seus arquivos csv em /temp
+  

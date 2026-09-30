@@ -1,0 +1,56 @@
+--1. Criar a Tabela de Configuração (Onde moram as regras)
+
+--Antes da View, precisamos da tabela que diz quanto cada CST paga de imposto:
+SQL
+
+CREATE TABLE IF NOT EXISTS public.config_tributaria (
+    cst_icms VARCHAR(3) PRIMARY KEY,
+    aliquota_estimada NUMERIC(5,2),
+    descricao_regra TEXT
+);
+
+-- Inserindo valores base (podes ajustar estas percentagens depois)
+INSERT INTO public.config_tributaria (cst_icms, aliquota_estimada, descricao_regra) VALUES
+('000', 18.00, 'Tributada Integralmente'),
+('020', 12.00, 'Redução de Base'),
+('060', 0.00,  'ICMS ST (Cobrado Anteriormente)'),
+('500', 0.00,  'Simples Nacional'),
+('102', 0.00,  'Simples Nacional sem Permissão de Crédito')
+ON CONFLICT (cst_icms) DO NOTHING;
+
+--2. Criar a View vw_pdv_bipagem
+
+--este é o comando que "une" os teus 21.799 produtos com as regras de imposto. É desta View que o teu CaixasForm vai ler os dados:
+SQL
+
+CREATE OR REPLACE VIEW public.vw_pdv_bipagem AS
+SELECT 
+    p.id,
+    p.codigo_barra,
+    p.descricao,
+    p.marca,
+    p.preco_venda,
+    p.quantidade_estoque,
+    p.cst_icms,
+    p.preco_custo,
+    COALESCE(t.aliquota_estimada, 13.45) as aliquota_aplicada,
+    ROUND((p.preco_venda * COALESCE(t.aliquota_estimada, 13.45) / 100), 2) as valor_imposto_item
+FROM 
+    public.tabela_produtos p
+LEFT JOIN 
+    public.config_tributaria t ON p.cst_icms = t.cst_icms;
+
+--3. Por que fizemos isto?
+
+--Agora, quando o teu Java rodar:
+SELECT * FROM vw_pdv_bipagem WHERE codigo_barra = '7896565700638'
+
+--O resultado já virá assim (exemplo):
+
+--    Descrição: FLANELA
+
+--    Preço: 15.72
+
+--    Aliquota: 18.00
+
+--   Valor Imposto: 2.83
