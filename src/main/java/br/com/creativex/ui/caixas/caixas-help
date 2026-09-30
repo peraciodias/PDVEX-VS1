@@ -1,0 +1,39 @@
+Para que ele funcione como um PDV (Ponto de Venda) real, precisamos que ele seja rápido: o operador bipa o código, o item entra na tabela, o foco volta para o campo de código e o total atualiza instantaneamente.
+
+
+BigDecimal e Locale: Usei NumberFormat para que os preços apareçam como R$ 10,00 na tela, mas fiquem como BigDecimal por baixo para evitar erros de arredondamento.
+
+Atalhos de Teclado: estrutura para o F12, essencial para agilizar o trabalho no caixa.
+
+Lógica de Carrinho: O formulário  mantém um objeto Venda vendaAtual ativo. Cada bip atualiza esse objeto e a tabela simultaneamente.
+
+Para o código acima funcionar sem erros, precisamos criar no seu ProdutoDAO o método buscarPorCodigoOuId(String filtro).
+
+Vamos implementar o método de busca no seu ProdutoDAO. Esse método é vital porque ele precisa ser flexível: o operador pode digitar o ID do produto ou passar o Código de Barras pelo leitor.
+
+1. Método buscarPorCodigoOuId no ProdutoDAO
+Adicione este método à classe ProdutoDAO. Ele utiliza um OR no SQL para verificar os dois campos.
+
+1. VendaDAO.java (Corrigido com getConnection)
+Este arquivo gerencia a transação completa: insere a venda, percorre os itens, baixa o estoque e registra a movimentação.
+Segurança de Dados: O uso de conn.rollback() garante que se um único item da lista falhar ao atualizar o estoque, a venda inteira é cancelada, evitando furos no inventário.
+
+Consistência: As queries agora apontam para a coluna id, resolvendo a incompatibilidade que você mencionou anteriormente.
+
+Gerenciamento de Recursos: Adicionei blocos try-with-resources ou fechamentos explícitos para evitar vazamento de conexões no banco de dados.
+
+Correção do Método limparVenda
+Este método deve garantir que tanto a "memória" do sistema (vendaAtual) quanto a "tela" (modelCarrinho) voltem ao estado zero:
+Tratamento de Exceção: O catch (SQLException ex) agora está dentro do fluxo de finalização, garantindo que se o banco falhar, o operador seja avisado e a venda não seja limpa da tela (permitindo tentar novamente).
+Ao clicar em Confirmar, o VendaDAO executa o bloco try/catch com conn.setAutoCommit(false).
+
+Isso garante que:
+
+Se o banco de dados cair após registrar a venda, mas antes de tirar o produto do estoque, nada é salvo (Rollback).
+
+O estoque e a venda estarão sempre sincronizados.
+
+O sistema de caixa básico está pronto! O próximo passo ideal seria implementar a impressão de um cupom não fiscal ou criar a tabela de fechamento de caixa (para saber quanto entrou de dinheiro/cartão no dia). O que prefere fazer?
+
+
+Fluxo Transacional: A sincronização ocorre agora no momento em que o vendaDAO.finalizarVenda é executado, seguindo este fluxo:

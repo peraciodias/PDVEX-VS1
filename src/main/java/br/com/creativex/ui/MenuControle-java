@@ -1,0 +1,22 @@
+package com.creativex.ui;
+
+public class MenuControle {
+
+    private static MenuControle menuControle;
+
+    public static void setMenuControle(MainWindow window) {
+        menuControle = window;
+    }
+
+    public static void goTo(Object panel) {
+        if (menuControle != null && panel instanceof javax.swing.JPanel) {
+            menuControle.abrirModulo((javax.swing.JPanel) panel);
+        }
+    }
+
+    public static void backToHome() {
+        if (menuControle != null) {
+            menuControle.abrirModulo(new ui.br.com.creativex.HomeScreen());
+        }
+    }
+}
