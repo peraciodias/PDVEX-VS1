@@ -1,0 +1,9 @@
+pgAdmin4 LOGIN 
+oPCIONAL SERVER NAME -> PostgreSQL 18(NO MEU CASO)
+Server name ->PostgreSQL 18 (ou o que você criou na instalação do postgresSQL)
+HOST NAME -> localhost
+PORT -> 5432
+Database postgres -> padrão
+User postgres -> padrão
+login admin padrão postgres
+senhas root padrão postgre
