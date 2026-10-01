@@ -1,0 +1,19 @@
+ARQUIVO PRODUTOS.CSV ORIGINAL MODIFICADO  :
+
+CABEÇALHO->
+
+CODIGO_BARRA;ORIGEM;DESCRICAO;MARCA;ATRIBUTO;UN MEDIDA;CATEGORIA;COD_GRUPO;grupo;BALANCA;QTDE_ESTOQUE;PRECO_CUSTO;PRECO_VENDA;NCM;CEST;CFTOP;UN_TRIBUT;CEAN_TRIBUT;CST-ICMS;ALICOTA_ICMS;CST_PIS;PPIS;CST_COFINS;PCOFINS;DT_CADASTRO;LOJA
+
+
+IMPORTA OS DADOS 
+COPY public.tabela_produtos (codigo_barra, origem, descricao, marca, atributos, unidade_medida, categoria, cod_grupo, grupo, tipo_balanca, quantidade_estoque, preco_custo,  preco_venda, ncm, cest, cfop_padrao, unidade_tributavel, cean_tributavel, cst_icms, aliquota_icms, cst_pis, ppis, cst_cofins, pcofins, data_cadastro, loja) FROM 'C:\Users\Public\PRODUTOS.CSV' WITH (FORMAT CSV, HEADER, DELIMITER ';', ENCODING 'UTF8');
+
+
+ARQUIVO PRODUTOS.CSV ORIGINAL MODIFICADO  :
+
+CODIGO_BARRA;ORIGEM;DESCRICAO;MARCA;ATRIBUTO;UN MEDIDA;CATEGORIA;COD_GRUPO;grupo;BALANCA;QTDE_ESTOQUE;PRECO_CUSTO;PRECO_VENDA;NCM;CEST;CFTOP;UN_TRIBUT;CEAN_TRIBUT;CST-ICMS;ALICOTA_ICMS;CST_PIS;PPIS;CST_COFINS;PCOFINS;DT_CADASTRO;LOJA
+
+**IMPORTANTE**
+FAZ BACKUP DA TABELA 
+
+pg_dump -u seu_usuario -t public.tabela_produtos bco_dados_mercado > base_produtos_limpa.sql

@@ -1,0 +1,21 @@
+**lista usuários 
+SELECT nome,login,senha,perfil,ativo FROM tabela_usuarios ORDER BY id OFFSET 0;
+
+**lista produtos A PARTIR de OFFSET 0
+SELECT id, codigo_barra, descricao, marca, quantidade_estoque, preco_venda, cst_icms FROM tabela_produtos ORDER BY id OFFSET 0;
+
+** preenche colunas com '100.00'
+UPDATE tabela_produtos SET quantidade_estoque = 50.00;
+
+**preenche colunas com valores aleatórios de 1 a 100.
+UPDATE nome_tabela SET nome_coluna = floor(random() * 100 + 1)::int;
+
+--exemplo:
+UPDATE tabela_produtos SET preco_custo = floor(random() * 50 + 1)::int;
+
+UPDATE tabela_produtos SET preco_venda = preco_custo + (preco_custo * 0.50);
+
+**preenche com caracteres aleatórios
+UPDATE nome_tabela 
+SET nome_coluna = md5(random()::text);
+

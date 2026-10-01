@@ -1,0 +1,4 @@
+razao_social;nome_fantasia;cnpj;ie;contato;telefone;email;endereco;numero;complemento;bairro;cidade;uf;cep;limite_credito;data_cadastro
+"Suprimentos Modernos Ltda.";"SM Escritório & Cia";12345678000190;112.233.445.566;"Jõao Lopes - vendedor";1112345678;"contato@smmodernos.com.br";"Rua das Flores";128;;"Bela Vista";"São Paulo";SP;12345321;0.00;2025-12-21 19:43:37
+"Serviços de Consultoria Alpha Ltda.";"Alpha Consultoria ";12345678000112;123.456.789.012;"Sandro";1122334567;"contato@alphaconsultoria.com.br";"Rua das Inovações";456;;"Vila Tecnológica";"São Paulo";SP;23454567;0.00;2025-12-21 19:47:46
+"Indústria e Comércio de Papéis Alfa Ltda.";"Alfa Papelaria";60437647004366;123.456.789.012;"SIlvana Dias";11991237686;"contato@alfapapelaria.com.br";"Rua do Sabugo";380;;"Cidade Nova";"Itu";SP;18003209;0.00;2025-12-21 20:25:41

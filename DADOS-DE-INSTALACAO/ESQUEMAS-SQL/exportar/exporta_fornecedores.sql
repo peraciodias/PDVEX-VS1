@@ -1,0 +1,1 @@
+COPY public.tabela_fornecedores TO '/tmp/backup_fornecedores.csv' WITH (FORMAT CSV, HEADER, DELIMITER ';', QUOTE '"', FORCE_QUOTE (razao_social, nome_fantasia, contato, email, endereco, bairro, cidade), ENCODING 'UTF8');

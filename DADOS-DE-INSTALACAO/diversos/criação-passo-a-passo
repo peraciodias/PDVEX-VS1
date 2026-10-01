@@ -1,0 +1,19 @@
+
+CREATE DATABASE bco_dados_mercado;
+
+2. Conecte-se ao banco criado (Crucial!)Antes de dar permissões sobre as tabelas do mercado, 
+você precisa "entrar" nele. No psql, use:
+
+psql:\c bco_dados_mercado
+3. Crie suas tabelas
+
+--conceder permissões a outros usuários:
+-- 1. Conecta no banco bco_dados_mercado como 'pera'
+-- 2. Concede acesso ao esquema (onde as tabelas ficam)
+GRANT USAGE ON SCHEMA public TO nome_do_outro_usuario;
+
+-- Rode isso dentro do bco_dados_mercado para o usuário não travar ao inserir dados
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO pera;
+
+-- E para garantir que as próximas tabelas com ID automático também funcionem:
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO pera;
